@@ -1,0 +1,7 @@
+[project]
+name = "chat-with-archive"
+version = "0.1.0"
+description = "Chat with an AI question-answering agent that has tools for getting Twitter Community Archive data"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = []
