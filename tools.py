@@ -48,17 +48,15 @@ tools = [
                     "description": "Maximum number of records to return."
                 }
             },
-            "required": [],
+            "required": ["select", "limit"],
             "optional": [
                 "id",
                 "url",
                 "expanded_url",
                 "display_url",
                 "tweet_id",
-                "select",
                 "order",
-                "offset",
-                "limit"
+                "offset"
             ],
             "additionalProperties": True
         }
@@ -108,16 +106,14 @@ tools = [
                     "description": "Maximum number of records to return."
                 }
             },
-            "required": [],
+            "required": ["select", "limit"],
             "optional": [
                 "user_id",
                 "name",
                 "screen_name",
                 "updated_at",
-                "select",
                 "order",
-                "offset",
-                "limit"
+                "offset"
             ],
             "additionalProperties": True
         }
@@ -167,16 +163,14 @@ tools = [
                     "description": "Maximum number of records to return."
                 }
             },
-            "required": [],
+            "required": ["select", "limit"],
             "optional": [
                 "id",
                 "account_id",
                 "follower_account_id",
                 "archive_upload_id",
-                "select",
                 "order",
-                "offset",
-                "limit"
+                "offset"
             ],
             "additionalProperties": True
         }
@@ -226,16 +220,14 @@ tools = [
                     "description": "Maximum number of records to return."
                 }
             },
-            "required": [],
+            "required": ["select", "limit"],
             "optional": [
                 "id",
                 "account_id",
                 "archive_at",
                 "created_at",
-                "select",
                 "order",
-                "offset",
-                "limit"
+                "offset"
             ],
             "additionalProperties": True
         }
@@ -277,14 +269,12 @@ tools = [
                     "description": "Maximum number of records to return."
                 }
             },
-            "required": [],
+            "required": ["select", "limit"],
             "optional": [
                 "tweet_id",
                 "full_text",
-                "select",
                 "order",
-                "offset",
-                "limit"
+                "offset"
             ],
             "additionalProperties": True
         }
@@ -334,16 +324,14 @@ tools = [
                     "description": "Maximum number of records to return."
                 }
             },
-            "required": [],
+            "required": ["select", "limit"],
             "optional": [
                 "id",
                 "account_id",
                 "following_account_id",
                 "archive_upload_id",
-                "select",
                 "order",
-                "offset",
-                "limit"
+                "offset"
             ],
             "additionalProperties": True
         }
@@ -405,7 +393,7 @@ tools = [
                     "description": "Maximum number of records to return."
                 }
             },
-            "required": [],
+            "required": ["select", "limit"],
             "optional": [
                 "media_id",
                 "tweet_id",
@@ -414,10 +402,8 @@ tools = [
                 "width",
                 "height",
                 "archive_upload_id",
-                "select",
                 "order",
-                "offset",
-                "limit"
+                "offset"
             ],
             "additionalProperties": True
         }
@@ -471,17 +457,15 @@ tools = [
                     "description": "Maximum number of records to return."
                 }
             },
-            "required": [],
+            "required": ["select", "limit"],
             "optional": [
                 "account_id",
                 "created_via",
                 "username",
                 "created_at",
                 "account_display_name",
-                "select",
                 "order",
-                "offset",
-                "limit"
+                "offset"
             ],
             "additionalProperties": True
         }
@@ -547,7 +531,7 @@ tools = [
                     "description": "Maximum number of records to return."
                 }
             },
-            "required": [],
+            "required": ["select", "limit"],
             "optional": [
                 "id",
                 "account_id",
@@ -557,10 +541,8 @@ tools = [
                 "location",
                 "avatar_media_url",
                 "header_media_url",
-                "select",
                 "order",
-                "offset",
-                "limit"
+                "offset"
             ],
             "additionalProperties": True
         }
@@ -634,7 +616,7 @@ tools = [
                     "description": "Maximum number of records to return."
                 }
             },
-            "required": [],
+            "required": ["select", "limit"],
             "optional": [
                 "tweet_id",
                 "account_id",
@@ -646,10 +628,8 @@ tools = [
                 "reply_to_user_id",
                 "reply_to_username",
                 "archive_upload_id",
-                "select",
                 "order",
-                "offset",
-                "limit"
+                "offset"
             ],
             "additionalProperties": True
         }
@@ -699,16 +679,14 @@ tools = [
                     "description": "Maximum number of records to return."
                 }
             },
-            "required": [],
+            "required": ["select", "limit"],
             "optional": [
                 "id",
                 "account_id",
                 "liked_tweet_id",
                 "archive_upload_id",
-                "select",
                 "order",
-                "offset",
-                "limit"
+                "offset"
             ],
             "additionalProperties": True
         }
@@ -754,15 +732,13 @@ tools = [
                     "description": "Maximum number of records to return."
                 }
             },
-            "required": [],
+            "required": ["select", "limit"],
             "optional": [
                 "id",
                 "mentioned_user_id",
                 "tweet_id",
-                "select",
                 "order",
-                "offset",
-                "limit"
+                "offset"
             ],
             "additionalProperties": True
         }

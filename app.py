@@ -34,16 +34,21 @@ in data voluntarily uploaded to the Twitter Community Archive. You
 have no access to Twitter itself and cannot answer questions about
 Twitter activity outside of what is in the archive. Always format your
 responses in markdown. Be proactive about soliciting from the user any
-necessary parameters that might be necessary to answer their
-questions. For instance, if the user asks about their own activity but
-negelects to provide any identifying information, you should ask for
-their username.
+parameters needed to answer their questions, but don't refuse a query
+just because it's a bit vague. For instance, if the user asks about
+their own activity but neglects to provide any identifying
+information, you should ask for their username. Fulfill the user's
+request if at all possible even if it's vague, but invite them to be
+more specific in their next message when you present the results.
 
 Since the Twitter Community Archive API is a PostgREST API, you must
 use PostgREST operators for filtering. If possible, you should
 retrieve any information requested by the user using a single API call.
 You may use nested resource embedding or include logical operator keys
-in your request parameters to construct complex user queries.
+in your request parameters to construct complex user queries. Always
+use the `limit` parameter to paginate results! Requesting more than 50
+results at a time is abusive of the Twitter Community Archive API.
+Please do not abuse our tools!
 
 When constructing nested queries, you should pay close attention to
 foreign key relationships and endpoint names specified in the schema.
@@ -67,9 +72,9 @@ def start_chat():
 
 
 @cl.step(type="tool")
-async def call_tool(tool_call, endpoint, message_history):
-    function_name = tool_call.function.name
-    arguments = tool_call.function.arguments
+async def call_tool(tool_call, endpoint: dict, message_history: list) -> None:
+    function_name: str = tool_call.function.name
+    arguments: str = tool_call.function.arguments
     logger.info(f"Calling tool {function_name} with arguments {arguments}")
 
     current_step = cl.context.current_step
@@ -77,26 +82,28 @@ async def call_tool(tool_call, endpoint, message_history):
     current_step.input = arguments
 
     function_response = make_request(
-        arguments, endpoint
+        endpoint, arguments
     )
 
-    current_step.output = function_response
+    serialized_response = json.dumps(function_response)
+    if len(serialized_response) > 4000:
+        prefix = "Looks like the response was very long. Are you being a naughty chatbot and making requests without the `limit` parameter? Here's the first 4000 characters of the response:\n\n"
+        serialized_response = serialized_response[:4000] + "..."
+
+    current_step.output = serialized_response
     current_step.language = "json"
 
-    message_history.append(
-        {
-            "role": "function",
-            "name": function_name,
-            "content": function_response,
-            "tool_call_id": tool_call.id,
-        }
-    )
+    return {
+        "role": "tool",
+        "tool_call_id": tool_call.id,
+        "content": serialized_response,
+    }
 
 
 async def call_llm(message_history) -> cl.Message:
     settings = {
         "model": "gpt-4o-mini",
-        "tools": tools,
+        "tools": request_schemas,
         "tool_choice": "auto",
     }
 
@@ -105,26 +112,21 @@ async def call_llm(message_history) -> cl.Message:
     )
 
     message: cl.Message = response.choices[0].message
-    logger.info(f"Finish reason: {response.finish_reason}")
+    message_history.append(message)
 
-    if response.finish_reason == "tool_calls":
-        logger.info(f"Tool calls: {message.tool_calls}")
-        for tool_call in message.tool_calls or []:
-            endpoint_name = tool_call.function.name
-            endpoint = next((item for item in endpoint_schemas if item["name"] == endpoint_name), None)
-            if not endpoint:
-                logger.warning(f"Endpoint {endpoint_name} not found")
-            else:
-                await call_tool(tool_call, endpoint, message_history)
+    tool_calls = message.tool_calls or []
+    for tool_call in tool_calls:
+        endpoint_name: str = tool_call.function.name
+        endpoint: dict | None = next((item for item in endpoint_schemas if item["name"] == endpoint_name), None)
+
+        if not endpoint:
+            logger.warning(f"Endpoint {endpoint_name} not found")
+        else:
+            tool_message = await call_tool(tool_call, endpoint, message_history)
+            message_history.append(tool_message)
 
     if message.content:
         cl.context.current_step.output = message.content
-
-    elif message.tool_calls:
-        completion = message.tool_calls
-
-        cl.context.current_step.language = "json"
-        cl.context.current_step.output = completion
 
     return message
 
@@ -132,7 +134,9 @@ async def call_llm(message_history) -> cl.Message:
 @cl.on_message
 async def run_conversation(message: cl.Message):
     message_history = cl.user_session.get("message_history")
-    message_history.append({"name": "user", "role": "user", "content": message.content})
+
+    # Add the user's message to the message history
+    message_history.append({"role": "user", "content": message.content})
 
     cur_iter = 0
 

@@ -1,39 +1,36 @@
 **Under Construction**
 
-Title: OpenAI functions with Chainlit
-Tags: [openai-functions]
+1. Prerequisites:
 
-# OpenAI functions with Chainlit
+- Install [Python 3.12](https://www.python.org/downloads/) or later.
+- Install the `uv` package manager: `pip install uv`.
 
-This folder is showing how to use OpenAI functions with Chainlit.
+2. Clone the repository and navigate to the `chat-with-archive` directory:
 
-OpenAI functions enable GPT to use functions you defined in your code.
-To run the example, follow the instructions of the [main readme](/README.md).
-
-## Quickstart
-
-To get started with using OpenAI functions in Chainlit, follow these steps:
-
-1. Clone the repository and navigate to the `openai-functions` directory.
-2. Ensure you have an OpenAI API key and set it as an environment variable `OPENAI_API_KEY`.
-3. Define your custom functions that you want GPT to use. For example, a simple weather function is provided:
-```python
-def get_current_weather(location, unit="Fahrenheit"):
-"""Get the current weather in a given location"""
-weather_info = {
-"location": location,
-"temperature": "72",
-"unit": unit,
-"forecast": ["sunny", "windy"],
-}
-return json.dumps(weather_info)
 ```
-4. Use the `@cl.step` decorator to create steps that call your custom functions and handle the interaction with the GPT model.
-5. Run your Chainlit app using the provided `app.py` as a starting point.
-6. Interact with your application through the Chainlit interface, where you can chat with GPT-4 and it will use your custom functions to respond.
+git clone https://github.com/chriscarrollsmith/chat-with-archive.git
+cd chat-with-archive
+```
 
-Remember to follow the instructions in the [main readme](/README.md) for setting up your Chainlit environment.
+3. Install the dependencies:
 
-![Rendering](./rendering.png)
-Title: OpenAI functions with Chainlit
-Tags: [open-ai, functions]
+```
+uv venv
+uv pip install
+```
+
+4. Copy `.env.example` to `.env` and set the required environment variables:
+
+```
+cp .env.example .env
+```
+
+You will need an [OpenAI API key](https://platform.openai.com/account/api-keys) and a [Twitter Community Archive API key](https://archive.org/services/api/archive.php).
+
+5. Run the app:
+
+```
+uv run app.py
+```
+
+6. Interact with the app through the Chainlit interface at http://localhost:8000.

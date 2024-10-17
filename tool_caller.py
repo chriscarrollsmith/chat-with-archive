@@ -31,13 +31,19 @@ def make_request(endpoint, params):
     """
     Fetch account info from the Supabase API.
     
-    :param url: The full URL of the account info endpoint
-    :param params: Additional parameters for the request
+    :param endpoint: The endpoint dictionary containing the URL and headers
+    :param params: Query parameters for the request
     :return: The JSON response from the API
     """    
-    url, params = replace_placeholders(endpoint.get("url"), params)
+    raw_url = endpoint.get("url")
+    request_url, request_params = replace_placeholders(
+        replace_env_vars(raw_url), params
+    )
+
+    headers = endpoint.get("headers", {})
+    request_headers = replace_env_vars(headers)
     
-    response = requests.get(url, params=params, headers=endpoint.get("headers", {}))
+    response = requests.get(request_url, params=request_params, headers=request_headers)
     
     if response.status_code in (200, 206):
         return response.json()
