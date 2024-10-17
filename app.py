@@ -112,3 +112,27 @@ async def run_conversation(message: cl.Message):
             break
 
         cur_iter += 1
+
+
+def process_tool_calls(calls, endpoints):
+    """
+    Processes any tool calls made by the assistant.
+
+    Args:
+        calls: The calls to process.
+        endpoints: The endpoints to use.
+    """
+    params = {}
+    endpoint = None
+    for call in calls:
+        endpoint_name = call.get("name")
+        endpoint = next((item for item in endpoints if item["name"] == endpoint_name), None)
+        if not endpoint:
+            print(f"Warning: Endpoint {endpoint_name} not found")
+        else:
+            try:
+                response = make_request(endpoint, params)
+            except requests.exceptions.RequestException as e:
+                print(f"An error occurred: {e}")
+    
+    return response

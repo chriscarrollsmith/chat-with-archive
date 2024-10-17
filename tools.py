@@ -60,7 +60,7 @@ tools = [
                 "offset",
                 "limit"
             ],
-            "additionalProperties": false
+            "additionalProperties": true
         }
     },
     {
@@ -119,7 +119,7 @@ tools = [
                 "offset",
                 "limit"
             ],
-            "additionalProperties": false
+            "additionalProperties": true
         }
     },
     {
@@ -178,7 +178,7 @@ tools = [
                 "offset",
                 "limit"
             ],
-            "additionalProperties": false
+            "additionalProperties": true
         }
     },
     {
@@ -237,7 +237,7 @@ tools = [
                 "offset",
                 "limit"
             ],
-            "additionalProperties": false
+            "additionalProperties": true
         }
     },
     {
@@ -286,7 +286,7 @@ tools = [
                 "offset",
                 "limit"
             ],
-            "additionalProperties": false
+            "additionalProperties": true
         }
     },
     {
@@ -345,7 +345,7 @@ tools = [
                 "offset",
                 "limit"
             ],
-            "additionalProperties": false
+            "additionalProperties": true
         }
     },
     {
@@ -419,7 +419,7 @@ tools = [
                 "offset",
                 "limit"
             ],
-            "additionalProperties": false
+            "additionalProperties": true
         }
     },
     {
@@ -483,7 +483,7 @@ tools = [
                 "offset",
                 "limit"
             ],
-            "additionalProperties": false
+            "additionalProperties": true
         }
     },
     {
@@ -562,7 +562,7 @@ tools = [
                 "offset",
                 "limit"
             ],
-            "additionalProperties": false
+            "additionalProperties": true
         }
     },
     {
@@ -651,7 +651,7 @@ tools = [
                 "offset",
                 "limit"
             ],
-            "additionalProperties": false
+            "additionalProperties": true
         }
     },
     {
@@ -710,7 +710,7 @@ tools = [
                 "offset",
                 "limit"
             ],
-            "additionalProperties": false
+            "additionalProperties": true
         }
     },
     {
@@ -764,7 +764,7 @@ tools = [
                 "offset",
                 "limit"
             ],
-            "additionalProperties": false
+            "additionalProperties": true
         }
     },
 ]
@@ -797,3 +797,22 @@ def wrap_tool_schema(tool_schema):
     }
 
     return function
+
+def validate_calls(calls):
+    """
+    Validates the calls to the API.
+
+    Args:
+        calls: The calls to validate.
+    """
+    if calls:
+        for call in calls:
+            assert isinstance(call, dict), f"Invalid call format: {call}"
+            # If there's a key named "action", rename it to "name"
+            if "action" in call:
+                call["name"] = call.pop("action")
+            # If there's a key named "action_input", rename it to "parameters"
+            if "action_input" in call:
+                call["parameters"] = call.pop("action_input")
+    
+    return calls
