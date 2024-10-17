@@ -60,7 +60,7 @@ tools = [
                 "offset",
                 "limit"
             ],
-            "additionalProperties": true
+            "additionalProperties": True
         }
     },
     {
@@ -119,7 +119,7 @@ tools = [
                 "offset",
                 "limit"
             ],
-            "additionalProperties": true
+            "additionalProperties": True
         }
     },
     {
@@ -178,7 +178,7 @@ tools = [
                 "offset",
                 "limit"
             ],
-            "additionalProperties": true
+            "additionalProperties": True
         }
     },
     {
@@ -237,7 +237,7 @@ tools = [
                 "offset",
                 "limit"
             ],
-            "additionalProperties": true
+            "additionalProperties": True
         }
     },
     {
@@ -286,7 +286,7 @@ tools = [
                 "offset",
                 "limit"
             ],
-            "additionalProperties": true
+            "additionalProperties": True
         }
     },
     {
@@ -345,7 +345,7 @@ tools = [
                 "offset",
                 "limit"
             ],
-            "additionalProperties": true
+            "additionalProperties": True
         }
     },
     {
@@ -419,7 +419,7 @@ tools = [
                 "offset",
                 "limit"
             ],
-            "additionalProperties": true
+            "additionalProperties": True
         }
     },
     {
@@ -483,7 +483,7 @@ tools = [
                 "offset",
                 "limit"
             ],
-            "additionalProperties": true
+            "additionalProperties": True
         }
     },
     {
@@ -562,7 +562,7 @@ tools = [
                 "offset",
                 "limit"
             ],
-            "additionalProperties": true
+            "additionalProperties": True
         }
     },
     {
@@ -651,7 +651,7 @@ tools = [
                 "offset",
                 "limit"
             ],
-            "additionalProperties": true
+            "additionalProperties": True
         }
     },
     {
@@ -710,7 +710,7 @@ tools = [
                 "offset",
                 "limit"
             ],
-            "additionalProperties": true
+            "additionalProperties": True
         }
     },
     {
@@ -764,7 +764,7 @@ tools = [
                 "offset",
                 "limit"
             ],
-            "additionalProperties": true
+            "additionalProperties": True
         }
     },
 ]

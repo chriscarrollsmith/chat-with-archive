@@ -3,6 +3,7 @@ import json
 import ast
 import os
 import dotenv
+from openai import types
 from openai import AsyncOpenAI
 import chainlit as cl
 from tools import tools, split_tool_schemas
@@ -66,7 +67,7 @@ def start_chat():
 
 
 @cl.step(type="tool")
-async def call_tool(tool_call, message_history):
+async def call_tool(tool_call, endpoint, message_history):
     function_name = tool_call.function.name
     arguments = tool_call.function.arguments
     logger.info(f"Calling tool {function_name} with arguments {arguments}")
@@ -75,8 +76,8 @@ async def call_tool(tool_call, message_history):
     current_step.name = function_name
     current_step.input = arguments
 
-    function_response = process_tool_calls(
-        arguments, endpoint_schemas
+    function_response = make_request(
+        arguments, endpoint
     )
 
     current_step.output = function_response
@@ -92,7 +93,7 @@ async def call_tool(tool_call, message_history):
     )
 
 
-async def call_llm(message_history):
+async def call_llm(message_history) -> cl.Message:
     settings = {
         "model": "gpt-4o-mini",
         "tools": tools,
@@ -103,17 +104,24 @@ async def call_llm(message_history):
         messages=message_history, **settings
     )
 
-    message = response.choices[0].message
+    message: cl.Message = response.choices[0].message
+    logger.info(f"Finish reason: {response.finish_reason}")
 
-    for tool_call in message.tool_calls or []:
-        if tool_call.type == "function":
-            await call_tool(tool_call, message_history)
+    if response.finish_reason == "tool_calls":
+        logger.info(f"Tool calls: {message.tool_calls}")
+        for tool_call in message.tool_calls or []:
+            endpoint_name = tool_call.function.name
+            endpoint = next((item for item in endpoint_schemas if item["name"] == endpoint_name), None)
+            if not endpoint:
+                logger.warning(f"Endpoint {endpoint_name} not found")
+            else:
+                await call_tool(tool_call, endpoint, message_history)
 
     if message.content:
         cl.context.current_step.output = message.content
 
     elif message.tool_calls:
-        completion = message.tool_calls[0].function
+        completion = message.tool_calls
 
         cl.context.current_step.language = "json"
         cl.context.current_step.output = completion
@@ -135,27 +143,3 @@ async def run_conversation(message: cl.Message):
             break
 
         cur_iter += 1
-
-
-def process_tool_calls(calls, endpoints):
-    """
-    Processes any tool calls made by the assistant.
-
-    Args:
-        calls: The calls to process.
-        endpoints: The endpoints to use.
-    """
-    params = {}
-    endpoint = None
-    for call in calls:
-        endpoint_name = call.get("name")
-        endpoint = next((item for item in endpoints if item["name"] == endpoint_name), None)
-        if not endpoint:
-            print(f"Warning: Endpoint {endpoint_name} not found")
-        else:
-            try:
-                response = make_request(endpoint, params)
-            except requests.exceptions.RequestException as e:
-                print(f"An error occurred: {e}")
-    
-    return response
