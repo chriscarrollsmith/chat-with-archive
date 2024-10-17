@@ -15,6 +15,18 @@ def replace_placeholders(url, params):
     return url, params
 
 
+def replace_env_vars(data):
+    """Recursively replaces {{ENV_VAR}} placeholders with environment variable values."""
+    if isinstance(data, str):
+        return re.sub(r"{{(\w+)}}", lambda match: os.environ.get(match.group(1), match.group(0)), data)
+    elif isinstance(data, dict):
+        return {key: replace_env_vars(value) for key, value in data.items()}
+    elif isinstance(data, list):
+        return [replace_env_vars(item) for item in data]
+    else:
+        return data
+
+
 def make_request(endpoint, params):
     """
     Fetch account info from the Supabase API.
@@ -31,15 +43,3 @@ def make_request(endpoint, params):
         return response.json()
     else:
         response.raise_for_status()
-
-
-def replace_env_vars(data):
-    """Recursively replaces {{ENV_VAR}} placeholders with environment variable values."""
-    if isinstance(data, str):
-        return re.sub(r"{{(\w+)}}", lambda match: os.environ.get(match.group(1), match.group(0)), data)
-    elif isinstance(data, dict):
-        return {key: replace_env_vars(value) for key, value in data.items()}
-    elif isinstance(data, list):
-        return [replace_env_vars(item) for item in data]
-    else:
-        return data

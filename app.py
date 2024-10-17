@@ -1,59 +1,82 @@
+import logging
 import json
 import ast
 import os
 import dotenv
 from openai import AsyncOpenAI
-from tools import tools
-
 import chainlit as cl
+from tools import tools, split_tool_schemas
+from tool_caller import make_request
 
 
+# Get Chainlit logger
+logger = cl.logger
+
+# Load environment variables
 dotenv.load_dotenv()
-
 api_key = os.environ.get("OPENAI_API_KEY")
+
+# Initialize OpenAI client and instrument it
 client = AsyncOpenAI(api_key=api_key)
-
-MAX_ITER = 5
-
 cl.instrument_openai()
 
+# Define maximum
+MAX_ITER = 5
 
-# Example dummy function hard coded to return the same weather
-# In production, this could be your backend API or an external API
-def get_current_weather(location, unit):
-    """Get the current weather in a given location"""
-    unit = unit or "Farenheit"
-    weather_info = {
-        "location": location,
-        "temperature": "72",
-        "unit": unit,
-        "forecast": ["sunny", "windy"],
-    }
+# Split tool schemas into endpoint schemas and request schemas
+endpoint_schemas, request_schemas = split_tool_schemas(tools)
 
-    return json.dumps(weather_info)
+# Set system prompt
+system_prompt = """
+Users will ask you questions about activity on Twitter, as represented
+in data voluntarily uploaded to the Twitter Community Archive. You
+have no access to Twitter itself and cannot answer questions about
+Twitter activity outside of what is in the archive. Always format your
+responses in markdown. Be proactive about soliciting from the user any
+necessary parameters that might be necessary to answer their
+questions. For instance, if the user asks about their own activity but
+negelects to provide any identifying information, you should ask for
+their username.
+
+Since the Twitter Community Archive API is a PostgREST API, you must
+use PostgREST operators for filtering. If possible, you should
+retrieve any information requested by the user using a single API call.
+You may use nested resource embedding or include logical operator keys
+in your request parameters to construct complex user queries.
+
+When constructing nested queries, you should pay close attention to
+foreign key relationships and endpoint names specified in the schema.
+For example, if the user wants bios for their followers, you cannot use
+`follower_account_id` from `get_followers`, because that variable has
+no foreign key relationships. Instead, you should use `account_id` from
+`get_following_accounts`, because that variable has a foreign key
+relationship to `account.account_id`, which in turn has a relationship
+to `user_profiles.account_id`. The nested "select" parameter would look
+like this: `account(account_id,profile(bio))`.
+"""
 
 
+# On chat start, set up the message history
 @cl.on_chat_start
 def start_chat():
     cl.user_session.set(
         "message_history",
-        [{"role": "system", "content": "You are a helpful assistant."}],
+        [{"role": "system", "content": system_prompt}],
     )
 
 
 @cl.step(type="tool")
 async def call_tool(tool_call, message_history):
     function_name = tool_call.function.name
-    arguments = ast.literal_eval(tool_call.function.arguments)
+    arguments = tool_call.function.arguments
+    logger.info(f"Calling tool {function_name} with arguments {arguments}")
 
     current_step = cl.context.current_step
     current_step.name = function_name
-
     current_step.input = arguments
 
-    function_response = get_current_weather(
-        location=arguments.get("location"),
-        unit=arguments.get("unit"),
+    function_response = process_tool_calls(
+        arguments, endpoint_schemas
     )
 
     current_step.output = function_response
@@ -69,9 +92,9 @@ async def call_tool(tool_call, message_history):
     )
 
 
-async def call_gpt4(message_history):
+async def call_llm(message_history):
     settings = {
-        "model": "gpt-4",
+        "model": "gpt-4o-mini",
         "tools": tools,
         "tool_choice": "auto",
     }
@@ -106,7 +129,7 @@ async def run_conversation(message: cl.Message):
     cur_iter = 0
 
     while cur_iter < MAX_ITER:
-        message = await call_gpt4(message_history)
+        message = await call_llm(message_history)
         if not message.tool_calls:
             await cl.Message(content=message.content, author="Answer").send()
             break

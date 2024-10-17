@@ -770,18 +770,24 @@ tools = [
 ]
 
 
-def split_tool_schema(tool_schema):
+def split_tool_schemas(tool_schemas):
     """
-    Splits tool schema into endpoint schema and request schema.
+    Splits tool schemas into endpoint schemas and request schemas.
 
     Args:
-        tool_schema: The tool schema to split.
+        tool_schemas: The tool schemas to split.
     """    
-    for item in tool_schema:
+    endpoints = []
+    requests = []
+    
+    for item in tool_schemas:
         endpoint = {key: item[key] for key in item if key not in ['description', 'parameters', 'additionalProperties']}
-        schema = {key: item[key] for key in item if key in ['name', 'description', 'parameters', 'additionalProperties']}
+        schema = wrap_tool_schema({key: item[key] for key in item if key in ['name', 'description', 'parameters', 'additionalProperties']})
 
-    return endpoint, schema
+        endpoints.append(endpoint)
+        requests.append(schema)
+
+    return endpoints, requests
 
 
 def wrap_tool_schema(tool_schema):
