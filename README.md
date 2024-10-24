@@ -16,7 +16,7 @@ cd chat-with-archive
 
 ```
 uv venv
-uv pip install
+uv pip install -r pyproject.toml
 ```
 
 4. Copy `.env.example` to `.env` and set the required environment variables:
