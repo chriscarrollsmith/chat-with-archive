@@ -30,7 +30,7 @@ You will need an [OpenAI API key](https://platform.openai.com/account/api-keys) 
 5. Run the app:
 
 ```
-uv run app.py
+uv run chainlit run app.py
 ```
 
 6. Interact with the app through the Chainlit interface at http://localhost:8000.
