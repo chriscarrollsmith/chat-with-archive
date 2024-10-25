@@ -4,9 +4,12 @@ import ast
 import os
 import dotenv
 import time
-from openai import types
-from openai import AsyncOpenAI, AsyncAssistantEventHandler
+from datetime import UTC, datetime
+from openai import OpenAI, AsyncOpenAI, AsyncAssistantEventHandler
+from openai.types.beta.threads.runs import RunStep
 import chainlit as cl
+from chainlit.config import config
+from chainlit.element import Element
 from tools import tools, split_tool_schemas
 from tool_caller import make_request
 import asyncio
@@ -32,7 +35,7 @@ sync_openai_client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
 
 # Get the assistant
 assistant = sync_openai_client.beta.assistants.retrieve(
-    os.environ.get("OPENAI_ASSISTANT_ID")
+    assistant_id
 )
 
 # Set the UI name
@@ -78,14 +81,14 @@ class EventHandler(AsyncAssistantEventHandler):
         self.current_tool_call = tool_call.id
         self.current_step = cl.Step(name=tool_call.type, type="tool", parent_id=cl.context.current_run.id)
         self.current_step.show_input = "python"
-        self.current_step.start = utc_now()
+        self.current_step.start = datetime.now(UTC).isoformat()
         await self.current_step.send()
 
     async def on_tool_call_delta(self, delta, snapshot): 
         if snapshot.id != self.current_tool_call:
             self.current_tool_call = snapshot.id
             self.current_step = cl.Step(name=delta.type, type="tool",  parent_id=cl.context.current_run.id)
-            self.current_step.start = utc_now()
+            self.current_step.start = datetime.now(UTC).isoformat()
             if snapshot.type == "code_interpreter":
                  self.current_step.show_input = "python"
             if snapshot.type == "function":
@@ -94,7 +97,12 @@ class EventHandler(AsyncAssistantEventHandler):
             await self.current_step.send()
         
         if delta.type == "function":
-            pass
+            if delta.function.output:
+                # Update the current step with the function output
+                self.current_step.output = json.dumps(delta.function.output, indent=2)
+                self.current_step.language = "json"
+                self.current_step.end = datetime.now(UTC).isoformat()
+                await self.current_step.update()
         
         if delta.type == "code_interpreter":
             if delta.code_interpreter.outputs:
@@ -102,7 +110,7 @@ class EventHandler(AsyncAssistantEventHandler):
                     if output.type == "logs":
                         self.current_step.output += output.logs
                         self.current_step.language = "markdown"
-                        self.current_step.end = utc_now()
+                        self.current_step.end = datetime.now(UTC).isoformat()
                         await self.current_step.update()
                     elif output.type == "image":
                         self.current_step.language = "json"
@@ -113,13 +121,13 @@ class EventHandler(AsyncAssistantEventHandler):
 
     async def on_event(self, event) -> None:
         if event.event == "error":
-            return cl.ErrorMessage(content=str(event.data.message)).send()
+            return await cl.ErrorMessage(content=str(event.data.message)).send()
 
     async def on_exception(self, exception: Exception) -> None:
-        return cl.ErrorMessage(content=str(exception)).send()
+        return await cl.ErrorMessage(content=str(exception)).send()
 
     async def on_tool_call_done(self, tool_call):       
-        self.current_step.end = utc_now()
+        self.current_step.end = datetime.now(UTC).isoformat()
         await self.current_step.update()
 
     async def on_image_file_done(self, image_file):
@@ -136,91 +144,61 @@ class EventHandler(AsyncAssistantEventHandler):
         self.current_message.elements.append(image_element)
         await self.current_message.update()
 
+# Set starter suggestions
+@cl.set_starters
+async def set_starters():
+    return [
+        cl.Starter(
+            label="Tweets that mention tpot",
+            message="What are the most recent 5 tweets that mention tpot?"
+        ),
+        cl.Starter(
+            label="What is a postrat?",
+            message="Search the archive for the term 'postrat' and see if you can figure out what that means."
+        )
+    ]
+
 # On chat start, set up the message history
 @cl.on_chat_start
 async def start_chat():
-    # Create a new thread for the conversation
-    thread = await client.beta.threads.create()
+    # Create a new OAI thread for the conversation
+    thread = await async_openai_client.beta.threads.create()
+    # Store the thread id in the user session
     cl.user_session.set("thread_id", thread.id)
-    cl.user_session.set("message_history", [])
 
 # If the user clicks stop on the current step, cancel the run
 @cl.on_stop
 async def stop_chat():
     current_run_step: RunStep = cl.user_session.get("run_step")
     if current_run_step:
-        await client.beta.threads.runs.cancel(thread_id=current_run_step.thread_id, run_id=current_run_step.run_id)
+        await async_openai_client.beta.threads.runs.cancel(thread_id=current_run_step.thread_id, run_id=current_run_step.run_id)
 
+# When the user sends a message, add it to the OAI thread and run the assistant
 @cl.on_message
-async def run_conversation(message: cl.Message):
+async def main(message: cl.Message):
+    # Get the OAI thread id from the user session
     thread_id = cl.user_session.get("thread_id")
-    message_history = cl.user_session.get("message_history")
 
-    # Add the user's message to the message history
-    message_history.append({"role": "user", "content": message.content})
+    # Process any attachments
+    attachments = await process_files(message.elements)
 
-    # Create a message in the thread
-    await client.beta.threads.messages.create(
-        thread_id=thread_id, role="user", content=message.content
+    # Add a Message to the Thread
+    oai_message = await async_openai_client.beta.threads.messages.create(
+        thread_id=thread_id,
+        role="user",
+        content=message.content,
+        attachments=attachments,
     )
 
-    cur_iter = 0
-
-    while cur_iter < MAX_ITER:
-        try:
-            # Check if there's an active run before creating a new one
-            active_runs = await client.beta.threads.runs.list(thread_id=thread_id)
-            if any(run.status in ["queued", "in_progress"] for run in active_runs.data):
-                logger.info("Waiting for active run to complete.")
-                await asyncio.sleep(1)
-                continue
-
-            # Create a run for the assistant to process the thread
-            run = await client.beta.threads.runs.create(
-                thread_id=thread_id,
-                assistant_id=assistant_id,
-            )
-
-            # Wait for the run to complete
-            run = await wait_on_run(run, thread_id)
-
-            # Retrieve messages from the thread
-            messages = await client.beta.threads.messages.list(thread_id=thread_id, order="asc")
-            for msg in messages.data:
-                if msg.role == "assistant":
-                    # Check if the message has already been sent
-                    if not any(m['content'] == msg.content[0].text.value for m in message_history):
-                        await cl.Message(content=msg.content[0].text.value, author="Answer").send()
-                        message_history.append({"role": "assistant", "content": msg.content[0].text.value})
-                        return  # Exit the loop after sending a valid response
-
-        except openai.BadRequestError as e:
-            # Handle the case where there is already an active run
-            if "already has an active run" in str(e):
-                logger.info("Active run detected, waiting for it to complete.")
-                await asyncio.sleep(1)  # Wait before retrying
-            else:
-                raise  # Re-raise the exception if it's not the expected error
-
-        cur_iter += 1
-        await asyncio.sleep(1)  # Add a delay to reduce request frequency
+    # Create and Stream a Run
+    async with async_openai_client.beta.threads.runs.stream(
+        thread_id=thread_id,
+        assistant_id=assistant.id,
+        event_handler=EventHandler(assistant_name=assistant.name),
+    ) as stream:
+        await stream.until_done()
 
 
-async def wait_on_run(run, thread_id):
-    while run.status in ["queued", "in_progress"]:
-        # Retrieve the latest status of the run
-        run = await client.beta.threads.runs.retrieve(
-            thread_id=thread_id,
-            run_id=run.id,
-        )
-        logger.info(f"Run status: {run.status}")  # Log the status for debugging
-        await asyncio.sleep(0.5)  # Use asyncio.sleep for non-blocking delay
-    return run
-
-
-
-# TODO: Finish implementing this template: https://github.com/Chainlit/cookbook/blob/main/openai-data-analyst/app.py
-# TODO: Finish reading the docs: https://docs.chainlit.io/concepts/chat-lifecycle
 @cl.step(type="tool")
 async def call_tool(tool_call, endpoint: dict, message_history: list) -> None:
     function_name: str = tool_call.function.name
@@ -250,32 +228,7 @@ async def call_tool(tool_call, endpoint: dict, message_history: list) -> None:
     }
 
 
-async def call_llm(message_history) -> cl.Message:
-    response = await client.chat.completions.create(
-        messages=message_history, **settings
-    )
-
-    message: cl.Message = response.choices[0].message
-    message_history.append(message)
-
-    tool_calls = message.tool_calls or []
-    for tool_call in tool_calls:
-        endpoint_name: str = tool_call.function.name
-        endpoint: dict | None = next((item for item in endpoint_schemas if item["name"] == endpoint_name), None)
-
-        if not endpoint:
-            logger.warning(f"Endpoint {endpoint_name} not found")
-        else:
-            tool_message = await call_tool(tool_call, endpoint, message_history)
-            message_history.append(tool_message)
-
-    if message.content:
-        cl.context.current_step.output = message.content
-
-    return message
-
-
-async def upload_files(files: List[Element]):
+async def upload_files(files: list[Element]):
     file_ids = []
     for file in files:
         uploaded_file = await async_openai_client.files.create(
@@ -285,7 +238,7 @@ async def upload_files(files: List[Element]):
     return file_ids
 
 
-async def process_files(files: List[Element]):
+async def process_files(files: list[Element]):
     # Upload files if any and get file_ids
     file_ids = []
     if len(files) > 0:
