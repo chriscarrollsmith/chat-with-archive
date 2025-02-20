@@ -31,13 +31,13 @@ def replace_env_vars(data: Union[str, Dict[str, Any], List[Any], Any]) -> Union[
         return data
 
 
-def make_request(endpoint: Dict[str, Any], params: Dict[str, Any]) -> Dict[str, Any]:
+def make_request(endpoint: Dict[str, Any], params: Dict[str, Any]) -> List[Any]:
     """
     Fetch account info from the Supabase API.
     
     :param endpoint: The endpoint dictionary containing the URL and headers
     :param params: Query parameters for the request
-    :return: The JSON response from the API
+    :return: The JSON response from the API as a list. If the response is a dictionary, it will be wrapped in a list
     """    
     raw_url = endpoint.get("url")
     request_url, request_params = replace_placeholders(
@@ -50,6 +50,7 @@ def make_request(endpoint: Dict[str, Any], params: Dict[str, Any]) -> Dict[str, 
     response = requests.get(request_url, params=request_params, headers=request_headers)
     
     if response.status_code in (200, 206):
-        return response.json()
+        data = response.json()
+        return [data] if isinstance(data, dict) else data
     else:
         response.raise_for_status()

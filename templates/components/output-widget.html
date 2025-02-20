@@ -1,0 +1,14 @@
+<!-- weather-widget.html -->
+<div class="toolOutput">
+  <div class="dataContainer">
+    {% for item in reports %}
+        {% for key, value in item.items() %}
+        <div class="dataRow">
+          <span class="dataKey">{{ key }}:</span>
+          <span class="dataValue">{{ value|string }}</span>
+        </div>
+        {% endfor %}
+      {% if not loop.last %}<hr>{% endif %}
+    {% endfor %}
+  </div>
+</div>

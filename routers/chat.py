@@ -270,19 +270,36 @@ async def stream_response(
 
                                     logger.info(f"Function response: {function_response}")
 
+                                    # If function_response is a list, truncate it to 50 rows
+                                    if isinstance(function_response, list) and len(function_response) > 50:
+                                        original_length = len(function_response)
+                                        function_response = function_response[:50]
+                                        truncation_note = f"\n\nNote: Output truncated. Showing first 50 of {original_length} rows."
+                                    else:
+                                        truncation_note = ""
+
                                     # Render a widget here
+                                    widget_html = templates.get_template('components/output-widget.html').render(
+                                        reports=function_response
+                                    )
 
                                     # Yield the widget
+                                    yield sse_format(
+                                        "toolOutput",
+                                        widget_html
+                                    )
 
                                     # Convert response to string and handle long responses
                                     serialized_response = json.dumps(function_response)
                                     if len(serialized_response) > 4000:
-                                        prefix = "Response truncated. First 4000 characters:\n\n"
+                                        prefix = f"Response truncated. First 4000 characters:{truncation_note}\n\n"
                                         serialized_response = prefix + serialized_response[:4000] + "..."
+                                    elif truncation_note:
+                                        serialized_response = json.dumps(function_response) + truncation_note
 
                                     data_for_tool = {
                                         "tool_outputs": {
-                                            "output": str(function_response),
+                                            "output": str(serialized_response),
                                             "tool_call_id": tool_call.id
                                         },
                                         "runId": run_requires_action_event.data.id,
