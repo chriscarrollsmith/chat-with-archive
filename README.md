@@ -1,36 +1,33 @@
-**Under Construction**
+# Chat with the X / Twitter Community Archive
 
-1. Prerequisites:
+This is a local web application for using the OpenAI Assistants API to chat with the X / Twitter Community Archive.
 
-- Install [Python 3.12](https://www.python.org/downloads/) or later.
-- Install the `uv` package manager: `pip install uv`.
+You will need an [OpenAI API key](https://platform.openai.com/account/api-keys) and a [Twitter Community Archive API key](https://archive.org/services/api/archive.php).
 
-2. Clone the repository and navigate to the `chat-with-archive` directory:
+## Quickstart Setup
 
-```
+### 1. Clone repo
+
+```shell
 git clone https://github.com/chriscarrollsmith/chat-with-archive.git
 cd chat-with-archive
 ```
 
-3. Install the dependencies:
+### 2. Install dependencies
 
-```
-uv venv
-uv pip install -r pyproject.toml
-```
-
-4. Copy `.env.example` to `.env` and set the required environment variables:
-
-```
-cp .env.example .env
+```shell
+uv sync
 ```
 
-You will need an [OpenAI API key](https://platform.openai.com/account/api-keys) and a [Twitter Community Archive API key](https://archive.org/services/api/archive.php).
+### 3. Run the FastAPI server
 
-5. Run the app:
-
-```
-uv run chainlit run app.py
+```shell
+uv run uvicorn main:app --host 0.0.0.0 --port 8000 --reload
 ```
 
-6. Interact with the app through the Chainlit interface at http://localhost:8000.
+### 4. Navigate to [http://localhost:8000](http://localhost:8000).
+
+### 5. Set your OpenAI API key and create an assistant in the GUI
+
+If your OPENAI_API_KEY or ASSISTANT_ID are not set, you will be redirected to the setup page where you can set them. (The values will be saved in a .env file in the root of the project.) Once set, you will be redirected to the home page and can begin a chat session.
+
