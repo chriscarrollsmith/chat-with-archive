@@ -1,0 +1,48 @@
+<!-- setup.html -->
+{% extends "layout.html" %}
+
+{% block content %}
+        <div class="setupContainer">
+          <h1 class="title">Setup Required</h1>
+            
+          {% if "API key" in message %}
+            <div class="setupForm">
+              <p class="setupMessage">Please enter your OpenAI API key to continue:</p>
+                <form action="{{ url_for('set_openai_api_key') }}" method="POST">
+                  <div class="inputWrapper">
+                    <input 
+                      type="password"
+                      name="api_key"
+                      placeholder="sk-..."
+                      required
+                      class="input"
+                    >
+                  </div>
+                  <button 
+                    type="submit"
+                    class="button"
+                  >
+                    Save API Key
+                  </button>
+                </form>
+              </div>
+          {% elif "Assistant ID" in message %}
+              <div class="setupForm">
+                <p class="setupMessage">You need to create an assistant to continue:</p>
+                <form action="{{ url_for('create_update_assistant') }}" method="POST">
+                  <button 
+                    type="submit"
+                    class="button"
+                  >
+                    Create Assistant
+                  </button>
+                </form>
+              </div>
+          {% elif message == "All set up!" %}
+              <div class="setupForm">
+                <p class="setupMessage">Your application is already configured and ready to use.</p>
+                <a href="{{ url_for('read_home') }}" class="button">Return to Home</a>
+              </div>
+          {% endif %}
+        </div>
+{% endblock %}

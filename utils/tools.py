@@ -1,4 +1,58 @@
-tools = [
+def split_tool_schemas(tool_schemas):
+    """
+    Splits tool schemas into endpoint schemas and request schemas.
+
+    Args:
+        tool_schemas: The tool schemas to split.
+    """    
+    endpoints = []
+    requests = []
+    
+    for item in tool_schemas:
+        endpoint = {key: item[key] for key in item if key not in ['description', 'parameters', 'additionalProperties']}
+        schema = {key: item[key] for key in item if key in ['name', 'description', 'parameters', 'additionalProperties']}
+
+        endpoints.append(endpoint)
+        requests.append(schema)
+
+    return endpoints, requests
+
+
+# Set system prompt
+SYSTEM_PROMPT = """
+Users will ask you questions about activity on Twitter, as represented
+in data voluntarily uploaded to the Twitter Community Archive. You
+have no access to Twitter itself and cannot answer questions about
+Twitter activity outside of what is in the archive. Always format your
+responses in markdown. Be proactive about soliciting from the user any
+parameters needed to answer their questions, but don't refuse a query
+just because it's a bit vague. For instance, if the user asks about
+their own activity but neglects to provide any identifying
+information, you should ask for their username. Fulfill the user's
+request if at all possible even if it's vague, but invite them to be
+more specific in their next message when you present the results.
+
+Since the Twitter Community Archive API is a PostgREST API, you must
+use PostgREST operators for filtering. If possible, you should
+retrieve any information requested by the user using a single API call.
+You may use nested resource embedding or include logical operator keys
+in your request parameters to construct complex user queries. Always
+use the `limit` parameter to paginate results! Requesting more than 50
+results at a time is abusive of the Twitter Community Archive API.
+Please do not abuse our tools!
+
+When constructing nested queries, you should pay close attention to
+foreign key relationships and endpoint names specified in the schema.
+For example, if the user wants bios for their followers, you cannot use
+`follower_account_id` from `get_followers`, because that variable has
+no foreign key relationships. Instead, you should use `account_id` from
+`get_following_accounts`, because that variable has a foreign key
+relationship to `account.account_id`, which in turn has a relationship
+to `user_profiles.account_id`. The nested "select" parameter would look
+like this: `account(account_id,profile(bio))`.
+"""
+
+TOOLS = [
     {
         "name": "get_tweet_urls",
         "url": "https://fabxmporizzqflnftavs.supabase.co/rest/v1/tweet_urls",
@@ -745,56 +799,4 @@ tools = [
     },
 ]
 
-
-def split_tool_schemas(tool_schemas):
-    """
-    Splits tool schemas into endpoint schemas and request schemas.
-
-    Args:
-        tool_schemas: The tool schemas to split.
-    """    
-    endpoints = []
-    requests = []
-    
-    for item in tool_schemas:
-        endpoint = {key: item[key] for key in item if key not in ['description', 'parameters', 'additionalProperties']}
-        schema = wrap_tool_schema({key: item[key] for key in item if key in ['name', 'description', 'parameters', 'additionalProperties']})
-
-        endpoints.append(endpoint)
-        requests.append(schema)
-
-    return endpoints, requests
-
-
-def wrap_tool_schema(tool_schema):
-    """
-    Wraps tool schema in a function that can be used by an OpenAI assistant.
-
-    Args:
-        tool_schema: The tool schema to wrap.
-    """
-    function = {
-        "type": "function",
-        "function": tool_schema
-    }
-
-    return function
-
-def validate_calls(calls):
-    """
-    Validates the calls to the API.
-
-    Args:
-        calls: The calls to validate.
-    """
-    if calls:
-        for call in calls:
-            assert isinstance(call, dict), f"Invalid call format: {call}"
-            # If there's a key named "action", rename it to "name"
-            if "action" in call:
-                call["name"] = call.pop("action")
-            # If there's a key named "action_input", rename it to "parameters"
-            if "action_input" in call:
-                call["parameters"] = call.pop("action_input")
-    
-    return calls
+ENDPOINT_SCHEMAS, REQUEST_SCHEMAS = split_tool_schemas(TOOLS)

@@ -1,0 +1,24 @@
+<!-- layout.html -->
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <title>Assistants API Quickstart</title>
+    <meta name="description" content="A quickstart template using the OpenAI Assistants API with Python, FastAPI, Jinja2, and HTMX">
+    <link rel="icon" href="{{ url_for('static', path='openai.svg') }}">
+    <link rel="stylesheet" href="{{ url_for('static', path='styles.css') }}">
+    <link rel="favicon" href="{{ url_for('static', path='favicon.png') }}">
+    <script src="{{ url_for('static', path='htmx.min.js') }}"></script>
+    <script src="{{ url_for('static', path='sse.js') }}"></script>
+  </head>
+  <body>
+    <main class="main">
+      <div class="container">
+        {% block content %}
+          <!-- Content will be injected here -->
+        {% endblock %}
+      </div>
+    </main>
+    <img class="logo" src="{{ url_for('static', path='openai.svg') }}" alt="OpenAI Logo" />
+  </body>
+</html>

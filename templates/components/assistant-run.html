@@ -1,0 +1,7 @@
+<!-- assistant-run.html -->
+<div class="assistant-run" hx-swap="beforeend" 
+     hx-ext="sse"     
+     sse-connect="/assistants/{{ assistant_id }}/messages/{{ thread_id }}/receive" 
+     sse-swap="messageCreated,toolCallCreated,toolOutput" 
+     sse-close="endStream">
+</div>
