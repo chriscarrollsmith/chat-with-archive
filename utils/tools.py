@@ -65,6 +65,10 @@ no foreign key relationships. Instead, you should use `account_id` from
 relationship to `account.account_id`, which in turn has a relationship
 to `user_profiles.account_id`. The nested "select" parameter would look
 like this: `account(account_id,profile(bio))`.
+
+Function outputs will be rendered as a widget in the UI, so you don't
+need to summarize the outputs, but it would be great if you could
+comment on the results or provide some analysis or insights.
 """
 
 TOOLS = [
