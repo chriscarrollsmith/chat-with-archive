@@ -6,7 +6,7 @@ from fastapi import FastAPI, Request
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from fastapi.responses import RedirectResponse
-from routers import chat, files, setup
+from routers import chat, setup
 from utils.threads import create_thread
 from fastapi.exceptions import HTTPException
 
@@ -23,7 +23,6 @@ app = FastAPI(lifespan=lifespan)
 
 # Mount routers
 app.include_router(chat.router)
-app.include_router(files.router)
 app.include_router(setup.router)
 
 # Mount static files (e.g., CSS, JS)

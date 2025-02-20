@@ -1,3 +1,18 @@
+def wrap_tool_schema(tool_schema):
+    """
+    Wraps tool schema in a function that can be used by an OpenAI assistant.
+
+    Args:
+        tool_schema: The tool schema to wrap.
+    """
+    function = {
+        "type": "function",
+        "function": tool_schema
+    }
+
+    return function
+
+
 def split_tool_schemas(tool_schemas):
     """
     Splits tool schemas into endpoint schemas and request schemas.
@@ -10,7 +25,7 @@ def split_tool_schemas(tool_schemas):
     
     for item in tool_schemas:
         endpoint = {key: item[key] for key in item if key not in ['description', 'parameters', 'additionalProperties']}
-        schema = {key: item[key] for key in item if key in ['name', 'description', 'parameters', 'additionalProperties']}
+        schema = wrap_tool_schema({key: item[key] for key in item if key in ['name', 'description', 'parameters', 'additionalProperties']})
 
         endpoints.append(endpoint)
         requests.append(schema)

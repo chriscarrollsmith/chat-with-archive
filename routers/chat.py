@@ -258,12 +258,13 @@ async def stream_response(
                                     args = json.loads(tool_call.function.arguments)
                                     function_name: str = tool_call.function.name
 
-                                    endpoint: dict | None = next((item for item in ENDPOINT_SCHEMAS if item["name"] == function_name), None)
+                                    endpoint = next((item for item in ENDPOINT_SCHEMAS if item["name"] == function_name), None)
                                     if not endpoint:
                                         logger.warning(f"Endpoint {function_name} not found")
+                                        raise ValueError(f"Endpoint {function_name} not found")
 
                                     function_response = make_request(
-                                        endpoint=ENDPOINT_SCHEMAS[function_name],
+                                        endpoint=endpoint,
                                         params=args or {}
                                     )
 
