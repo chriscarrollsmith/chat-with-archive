@@ -78,5 +78,9 @@ def make_request(endpoint: Dict[str, Any], params: Dict[str, Any]) -> List[Any]:
         except:
             error_message = f"HTTP {response.status_code} Error: {response.reason}"
         
+        if "failed to parse filter" in error_message:
+            error_message += " Did you remember to use PostgREST operators (e.g., eq, neq, gt, gte, lt, lte, like, ilike) for filtering?"
+        if "timeout" in error_message:
+            error_message += " You may have run a slow query. Try to optimize your query or break it into multiple steps."
         logger.error(error_message)
         raise requests.exceptions.HTTPError(error_message, response=response)
