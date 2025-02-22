@@ -234,7 +234,8 @@ async def stream_response(
         # First run of the assistant stream
         initial_manager = client.beta.threads.runs.stream(
             assistant_id=assistant_id,
-            thread_id=thread_id
+            thread_id=thread_id,
+            parallel_tool_calls=False
         )
 
         # We'll re-run the loop if needed for tool calls
