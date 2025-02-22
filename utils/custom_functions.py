@@ -19,8 +19,10 @@ def replace_placeholders(url: str, params: Dict[str, Any]) -> Tuple[str, Dict[st
     return url, params
 
 
-def replace_env_vars(data: Union[str, Dict[str, Any], List[Any], Any]) -> Union[str, Dict[str, Any], List[Any], Any]:
-    """Recursively replaces {{ENV_VAR}} placeholders with environment variable values."""
+def replace_env_vars(data: Union[str, Dict[str, Any], List[Any], Any]) -> Any:
+    """Recursively replaces {{ENV_VAR}} placeholders with environment variable values.
+    
+    Intended for inserting API key or bearer token secrets into the URL, request headers, arguments, etc."""
     if isinstance(data, str):
         return re.sub(r"{{(\w+)}}", lambda match: os.environ.get(match.group(1), match.group(0)), data)
     elif isinstance(data, dict):
@@ -37,18 +39,27 @@ def make_request(endpoint: Dict[str, Any], params: Dict[str, Any]) -> List[Any]:
     
     :param endpoint: The endpoint dictionary containing the URL and headers
     :param params: Query parameters for the request
-    :param timeout: Request timeout in seconds (default 5)
     :return: The JSON response from the API as a list. If the response is a dictionary, it will be wrapped in a list
     """    
-    raw_url = endpoint.get("url")
+    raw_url: Any | None = endpoint.get("url")
+    if not (raw_url and isinstance(raw_url, str)):
+        raise ValueError("URL missing from tool schema")
+
+    url_with_env_vars: Union[str, Dict[str, Any], List[Any], Any] = replace_env_vars(raw_url)
+    if not (url_with_env_vars and isinstance(url_with_env_vars, str)):
+        raise ValueError("Tool schema URL must be a string")
+    
     request_url, request_params = replace_placeholders(
-        replace_env_vars(raw_url), params
+        url_with_env_vars, params
     )
 
-    headers = endpoint.get("headers", {})
-    request_headers = replace_env_vars(headers)
-    # Add PostgREST timeout header
-    request_headers['Prefer'] = 'max-execution-time=5000'  # 5 seconds in milliseconds
+    headers: Any = endpoint.get("headers", {})
+    if not (headers and isinstance(headers, dict)):
+        raise ValueError("Tool schema headers must be a dictionary")
+
+    request_headers: Any = replace_env_vars(headers)
+    if not (request_headers and isinstance(request_headers, dict)):
+        raise ValueError("Tool schema headers must be a dictionary")
     
     response = requests.get(
         request_url, 

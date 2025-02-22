@@ -3,7 +3,7 @@ import logging
 import asyncio
 from dotenv import load_dotenv
 from openai import AsyncOpenAI
-from openai.types.beta.assistant_create_params import AssistantCreateParams
+from openai.types.beta.assistant_update_params import AssistantUpdateParams
 from openai.types.beta.assistant import Assistant
 from utils.tools import SYSTEM_PROMPT, REQUEST_SCHEMAS
 
@@ -44,7 +44,7 @@ def update_env_file(var_name: str, var_value: str, logger: logging.Logger):
 async def create_or_update_assistant(
         client: AsyncOpenAI,
         assistant_id: str,
-        request: AssistantCreateParams,
+        request: AssistantUpdateParams,
         logger: logging.Logger
 ) -> str:
     """
@@ -65,19 +65,19 @@ async def create_or_update_assistant(
 
             # Update the .env file with the new assistant ID
             update_env_file("ASSISTANT_ID", assistant.id, logger)
-    
-        return assistant.id
 
     except Exception as e:
         action = "update" if assistant_id else "create"
         logger.error(f"Failed to {action} assistant: {e}")
 
+    return assistant.id
 
-request: AssistantCreateParams = AssistantCreateParams(
+
+request: AssistantUpdateParams = AssistantUpdateParams(
     instructions=SYSTEM_PROMPT,
     name="Community Archive Assistant",
     model="gpt-4o",
-    tools=REQUEST_SCHEMAS,
+    tools=REQUEST_SCHEMAS
 )
 
 

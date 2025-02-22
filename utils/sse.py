@@ -1,4 +1,4 @@
-def sse_format(event: str, data: str, retry: int = None) -> str:
+def sse_format(event: str, data: str, retry: int | None = None) -> str:
     """
     Helper function to format a Server-Sent Event (SSE) message.
 
