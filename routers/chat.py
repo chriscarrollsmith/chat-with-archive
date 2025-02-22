@@ -138,8 +138,6 @@ async def stream_response(
         async with stream_manager as event_handler:
             event: AssistantStreamEvent
             async for event in event_handler:
-                logger.info(f"{event}")
-
                 if isinstance(event, ThreadMessageCreated):
                     step_id = event.data.id
 
@@ -153,7 +151,6 @@ async def stream_response(
                     time.sleep(0.25)  # Give the client time to render the message
 
                 if isinstance(event, ThreadMessageDelta):
-                    logger.info(f"Sending delta with name textDelta{step_id}")
                     yield sse_format(
                         f"textDelta{step_id}",
                         event.data.delta.content[0].text.value
@@ -231,18 +228,15 @@ async def stream_response(
         stream, and if the assistant requests a tool call, we do it and then re-run the stream.
         """
         step_id = 0
-        # First run of the assistant stream
         initial_manager = client.beta.threads.runs.stream(
             assistant_id=assistant_id,
             thread_id=thread_id,
             parallel_tool_calls=False
         )
 
-        # We'll re-run the loop if needed for tool calls
         stream_manager = initial_manager
         while True:  
             async for event in handle_assistant_stream(templates, logger, stream_manager, step_id):
-                # Detect the special "metadata" event at the end of the generator
                 if isinstance(event, dict) and event.get("type") == "metadata":
                     required_action: RequiredAction | None = event["required_action"]
                     step_id: int = event["step_id"]
@@ -251,14 +245,6 @@ async def stream_response(
                     # If the assistant still needs a tool call, do it and then re-stream
                     if required_action and required_action.submit_tool_outputs:
                         for tool_call in required_action.submit_tool_outputs.tool_calls:
-                            yield sse_format(
-                                "toolCallCreated",
-                                templates.get_template('components/assistant-step.html').render(
-                                    step_type='toolCall',
-                                    stream_name=f'toolDelta{step_id}'
-                                )
-                            )
-
                             if tool_call.type == "function":
                                 try:
                                     args = json.loads(tool_call.function.arguments)
@@ -266,7 +252,7 @@ async def stream_response(
 
                                     endpoint = next((item for item in ENDPOINT_SCHEMAS if item["name"] == function_name), None)
                                     if not endpoint:
-                                        logger.warning(f"Endpoint {function_name} not found")
+                                        logger.error(f"Endpoint {function_name} not found")
                                         raise ValueError(f"Endpoint {function_name} not found")
 
                                     function_response = make_request(
