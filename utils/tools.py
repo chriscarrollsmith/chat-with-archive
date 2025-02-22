@@ -4,7 +4,11 @@ import os
 load_dotenv(override=True)
 
 # Remove trailing slash from URL if present
-COMMUNITY_ARCHIVE_URL = os.getenv("COMMUNITY_ARCHIVE_URL").rstrip("/")
+COMMUNITY_ARCHIVE_URL = os.getenv("COMMUNITY_ARCHIVE_URL")
+if COMMUNITY_ARCHIVE_URL:
+    COMMUNITY_ARCHIVE_URL = COMMUNITY_ARCHIVE_URL.rstrip("/")
+else:
+    raise ValueError("COMMUNITY_ARCHIVE_URL is not set")
 
 
 def wrap_tool_schema(tool_schema):
