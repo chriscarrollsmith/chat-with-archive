@@ -495,9 +495,19 @@ pre {
 
 .dataContainer {
   display: flex;
-  align-items: flex-start;
-  gap: 20px;
-  justify-content: flex-start;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+}
+
+.dataRow {
+  display: flex;
+  gap: 8px;
+  width: 100%;
+}
+
+.dataKey {
+  font-weight: 500;
 }
 
 .location {

@@ -1,3 +1,12 @@
+from dotenv import load_dotenv
+import os
+
+load_dotenv(override=True)
+
+# Remove trailing slash from URL if present
+COMMUNITY_ARCHIVE_URL = os.getenv("COMMUNITY_ARCHIVE_URL").rstrip("/")
+
+
 def wrap_tool_schema(tool_schema):
     """
     Wraps tool schema in a function that can be used by an OpenAI assistant.
@@ -33,8 +42,141 @@ def split_tool_schemas(tool_schemas):
     return endpoints, requests
 
 
+DATABASE_SCHEMA = """
+account
+  - account_id (PK)
+  - created_via
+  - username
+  - created_at
+  - account_display_name
+  - num_tweets
+  - num_following
+  - num_followers
+  - num_likes
+
+all_account
+  - account_id (PK, FK -> account.account_id)
+  - created_via
+  - username
+  - created_at
+  - account_display_name
+  - num_tweets
+  - num_following
+  - num_followers
+  - num_likes
+  - updated_at
+
+all_profile
+  - account_id (PK, FK -> account.account_id)
+  - bio
+  - website
+  - location
+  - avatar_media_url
+  - header_media_url
+  - archive_upload_id (FK -> archive_upload.id)
+  - updated_at
+
+archive_upload
+  - id (PK)
+  - account_id (FK -> account.account_id)
+  - archive_at
+  - created_at
+  - keep_private
+  - upload_likes
+  - start_date
+  - end_date
+  - upload_phase
+
+conversations
+  - tweet_id (PK, FK -> enriched_tweets.tweet_id)
+  - conversation_id
+
+enriched_tweets
+  - tweet_id (PK)
+  - account_id (FK -> account.account_id)
+  - username
+  - account_display_name
+  - created_at
+  - full_text
+  - retweet_count
+  - favorite_count
+  - reply_to_tweet_id (FK -> enriched_tweets.tweet_id)
+  - reply_to_user_id (FK -> account.account_id)
+  - reply_to_username
+  - quoted_tweet_id (FK -> enriched_tweets.tweet_id)
+  - conversation_id (FK -> conversations.conversation_id)
+  - avatar_media_url
+  - archive_upload_id (FK -> archive_upload.id)
+
+followers
+  - id (PK)
+  - account_id (FK -> account.account_id)
+  - follower_account_id (FK -> account.account_id)
+  - archive_upload_id (FK -> archive_upload.id)
+  - updated_at
+
+following
+  - id (PK)
+  - account_id (FK -> account.account_id)
+  - following_account_id (FK -> account.account_id)
+  - archive_upload_id (FK -> archive_upload.id)
+  - updated_at
+
+liked_tweets
+  - tweet_id (PK, FK -> enriched_tweets.tweet_id)
+  - full_text
+  - fts
+
+likes
+  - id (PK)
+  - account_id (FK -> account.account_id)
+  - liked_tweet_id (FK -> enriched_tweets.tweet_id)
+  - archive_upload_id (FK -> archive_upload.id)
+  - updated_at
+
+mentioned_users
+  - user_id (PK)
+  - name
+  - screen_name
+  - updated_at
+
+profile
+  - account_id (PK, FK -> account.account_id)
+  - bio
+  - website
+  - location
+  - avatar_media_url
+  - header_media_url
+  - archive_upload_id (FK -> archive_upload.id)
+
+quote_tweets
+  - tweet_id (PK, FK -> enriched_tweets.tweet_id)
+  - quoted_tweet_id (FK -> enriched_tweets.tweet_id)
+  - quoted_tweet_username
+
+temporary_data
+  - type (PK)
+  - item_id (PK)
+  - originator_id (PK)
+  - timestamp
+  - data
+  - user_id
+  - inserted
+  - stored
+
+tweet_media
+  - media_id (PK)
+  - tweet_id (FK -> enriched_tweets.tweet_id)
+  - media_url
+  - media_type
+  - width
+  - height
+  - archive_upload_id (FK -> archive_upload.id)
+"""
+
+
 # Set system prompt
-SYSTEM_PROMPT = """
+SYSTEM_PROMPT = ("""
 Users will ask you questions about activity on Twitter, as represented
 in data voluntarily uploaded to the Twitter Community Archive. You
 have no access to Twitter itself and cannot answer questions about
@@ -66,15 +208,20 @@ relationship to `account.account_id`, which in turn has a relationship
 to `user_profiles.account_id`. The nested "select" parameter would look
 like this: `account(account_id,profile(bio))`.
 
-Function outputs will be rendered as a widget in the UI, so you don't
-need to summarize the outputs, but it would be great if you could
-comment on the results or provide some analysis or insights.
-"""
+Here's the database schema to inform your queries:
+
+{DATABASE_SCHEMA}
+                 
+Function outputs will be rendered as a widget in the UI. When you receive
+the results, you should either run another function call or merely
+reflect on the results in a comment. If you can provide some analysis or
+insights, that would be much better than a mere summary. Be opinionated!
+""").format(DATABASE_SCHEMA=DATABASE_SCHEMA)
 
 TOOLS = [
     {
         "name": "get_tweet_urls",
-        "url": "https://fabxmporizzqflnftavs.supabase.co/rest/v1/tweet_urls",
+        "url": f"{COMMUNITY_ARCHIVE_URL}/rest/v1/tweet_urls",
         "method": "GET",
         "headers": {
             "apikey": "{{COMMUNITY_ARCHIVE_API_KEY}}",
@@ -136,7 +283,7 @@ TOOLS = [
     },
     {
         "name": "get_mentioned_users",
-        "url": "https://fabxmporizzqflnftavs.supabase.co/rest/v1/mentioned_users",
+        "url": f"{COMMUNITY_ARCHIVE_URL}/rest/v1/mentioned_users",
         "method": "GET",
         "headers": {
             "apikey": "{{COMMUNITY_ARCHIVE_API_KEY}}",
@@ -193,7 +340,7 @@ TOOLS = [
     },
     {
         "name": "get_followers",
-        "url": "https://fabxmporizzqflnftavs.supabase.co/rest/v1/followers",
+        "url": f"{COMMUNITY_ARCHIVE_URL}/rest/v1/followers",
         "method": "GET",
         "headers": {
             "apikey": "{{COMMUNITY_ARCHIVE_API_KEY}}",
@@ -250,7 +397,7 @@ TOOLS = [
     },
     {
         "name": "get_archive_uploads",
-        "url": "https://fabxmporizzqflnftavs.supabase.co/rest/v1/archive_upload",
+        "url": f"{COMMUNITY_ARCHIVE_URL}/rest/v1/archive_upload",
         "method": "GET",
         "headers": {
             "apikey": "{{COMMUNITY_ARCHIVE_API_KEY}}",
@@ -307,7 +454,7 @@ TOOLS = [
     },
     {
         "name": "get_liked_tweets",
-        "url": "https://fabxmporizzqflnftavs.supabase.co/rest/v1/liked_tweets",
+        "url": f"{COMMUNITY_ARCHIVE_URL}/rest/v1/liked_tweets",
         "method": "GET",
         "headers": {
             "apikey": "{{COMMUNITY_ARCHIVE_API_KEY}}",
@@ -354,7 +501,7 @@ TOOLS = [
     },
     {
         "name": "get_following_accounts",
-        "url": "https://fabxmporizzqflnftavs.supabase.co/rest/v1/following",
+        "url": f"{COMMUNITY_ARCHIVE_URL}/rest/v1/following",
         "method": "GET",
         "headers": {
             "apikey": "{{COMMUNITY_ARCHIVE_API_KEY}}",
@@ -411,7 +558,7 @@ TOOLS = [
     },
     {
         "name": "get_tweet_media",
-        "url": "https://fabxmporizzqflnftavs.supabase.co/rest/v1/tweet_media",
+        "url": f"{COMMUNITY_ARCHIVE_URL}/rest/v1/tweet_media",
         "method": "GET",
         "headers": {
             "apikey": "{{COMMUNITY_ARCHIVE_API_KEY}}",
@@ -483,7 +630,7 @@ TOOLS = [
     },
     {
         "name": "get_account_info",
-        "url": "https://fabxmporizzqflnftavs.supabase.co/rest/v1/account",
+        "url": f"{COMMUNITY_ARCHIVE_URL}/rest/v1/account",
         "method": "GET",
         "headers": {
             "apikey": "{{COMMUNITY_ARCHIVE_API_KEY}}",
@@ -545,7 +692,7 @@ TOOLS = [
     },
     {
         "name": "get_user_profiles",
-        "url": "https://fabxmporizzqflnftavs.supabase.co/rest/v1/profile",
+        "url": f"{COMMUNITY_ARCHIVE_URL}/rest/v1/profile",
         "method": "GET",
         "headers": {
             "apikey": "{{COMMUNITY_ARCHIVE_API_KEY}}",
@@ -622,7 +769,7 @@ TOOLS = [
     },
     {
         "name": "get_tweets",
-        "url": "https://fabxmporizzqflnftavs.supabase.co/rest/v1/tweets",
+        "url": f"{COMMUNITY_ARCHIVE_URL}/rest/v1/tweets",
         "method": "GET",
         "headers": {
             "apikey": "{{COMMUNITY_ARCHIVE_API_KEY}}",
@@ -709,7 +856,7 @@ TOOLS = [
     },
     {
         "name": "get_likes",
-        "url": "https://fabxmporizzqflnftavs.supabase.co/rest/v1/likes",
+        "url": f"{COMMUNITY_ARCHIVE_URL}/rest/v1/likes",
         "method": "GET",
         "headers": {
             "apikey": "{{COMMUNITY_ARCHIVE_API_KEY}}",
@@ -766,7 +913,7 @@ TOOLS = [
     },
     {
         "name": "get_user_mentions",
-        "url": "https://fabxmporizzqflnftavs.supabase.co/rest/v1/user_mentions",
+        "url": f"{COMMUNITY_ARCHIVE_URL}/rest/v1/user_mentions",
         "method": "GET",
         "headers": {
             "apikey": "{{COMMUNITY_ARCHIVE_API_KEY}}",

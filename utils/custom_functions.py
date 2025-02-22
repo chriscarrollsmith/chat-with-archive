@@ -37,6 +37,7 @@ def make_request(endpoint: Dict[str, Any], params: Dict[str, Any]) -> List[Any]:
     
     :param endpoint: The endpoint dictionary containing the URL and headers
     :param params: Query parameters for the request
+    :param timeout: Request timeout in seconds (default 5)
     :return: The JSON response from the API as a list. If the response is a dictionary, it will be wrapped in a list
     """    
     raw_url = endpoint.get("url")
@@ -46,11 +47,25 @@ def make_request(endpoint: Dict[str, Any], params: Dict[str, Any]) -> List[Any]:
 
     headers = endpoint.get("headers", {})
     request_headers = replace_env_vars(headers)
+    # Add PostgREST timeout header
+    request_headers['Prefer'] = 'max-execution-time=5000'  # 5 seconds in milliseconds
     
-    response = requests.get(request_url, params=request_params, headers=request_headers)
+    response = requests.get(
+        request_url, 
+        params=request_params, 
+        headers=request_headers
+    )
     
     if response.status_code in (200, 206):
         data = response.json()
         return [data] if isinstance(data, dict) else data
     else:
-        response.raise_for_status()
+        # Try to get more detailed error information
+        try:
+            error_detail = response.json()
+            error_message = f"HTTP {response.status_code} Error: {response.reason}. Details: {error_detail}"
+        except:
+            error_message = f"HTTP {response.status_code} Error: {response.reason}"
+        
+        logger.error(error_message)
+        raise requests.exceptions.HTTPError(error_message, response=response)
